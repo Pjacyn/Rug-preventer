@@ -1,13 +1,20 @@
 import base64
 import binascii
 import hashlib
-import sys
+import string
+import random
 from typing import TextIO
 import os
 from datetime import datetime
 
 import cryptography
 from cryptography.fernet import Fernet
+from pip._vendor.distlib.compat import raw_input
+
+
+class WrongPassword(Exception):
+    message = 'Wrong password rug mate'
+    pass
 
 
 class Singleton(type):
@@ -35,17 +42,17 @@ def create_files():
             readerWrite.file_content.write(full_path + '\n')
 
 
-def base64_url_safe(string: str) -> str:
-    string = string.encode("utf-8")
-    return base64.urlsafe_b64encode(string)
-
-
 def log_to_file(data):
     log_file = os.path.dirname(os.path.realpath(__file__)) + '\log'
     readerWrite = Reader(log_file, 'a+')
     readerWrite.file_content.write('Log time:' + str(datetime.now()) + '\n')
     readerWrite.file_content.write(data + '\n')
     del readerWrite
+
+
+def random_string(stringLength=32):
+    letters = string.ascii_letters + string.digits
+    return ''.join(random.choice(letters) for i in range(stringLength))
 
 
 class ConsoleLogger(metaclass=Singleton):
@@ -67,10 +74,9 @@ class Reader:
     list_files_name: str = 'files.txt'
     file_name: str
     file_mode: str
-
     file_content: TextIO
 
-    def __init__(self, file_name, file_mode=def_files_mod):
+    def __init__(self, file_name=list_files_name, file_mode=def_files_mod):
         self.file_name = file_name.rstrip()
         self.file_mode = file_mode
         try:
@@ -92,14 +98,15 @@ class Reader:
 
 
 class Crypt:
-    additionalHash: str = 'op6sxM9WLEK0H7kTBpF5'
     crypt_key: str
 
-    def __init__(self, date_for_crypt=''):
-        if date_for_crypt == '':
-            date_for_crypt = datetime.today().strftime('%Y%m%d%H%M')
-        log_to_file(date_for_crypt)
-        self.crypt_key = base64_url_safe(date_for_crypt + self.additionalHash)
+    def __init__(self, password=''):
+        data = random_string()
+        log_to_file(data)
+        if password == '':
+            self.crypt_key = self.base64UrlSafe(data)
+        else:
+            self.crypt_key = password
 
     def encrypt(self, file: str):
         return Fernet(self.crypt_key).encrypt(file)
@@ -113,10 +120,14 @@ class Crypt:
         try:
             decrypted_content = self.decrypt(reader_rb.get_whole_file())
         except cryptography.fernet.InvalidToken:
-            print("File %s are encryptet you fuckin rug!" % CL.color(file, CL.HEADER))
+            print("File %s %s you fuckin rug!" % (
+                CL.color(file, CL.HEADER), CL.color('can\'t be decryptet', CL.FAIL)))
             return
+        except binascii.Error:
+            raise WrongPassword()
         reader_wb = Reader(file, 'wb')
         reader_wb.write_file(decrypted_content)
+        print("File %s %s you fuckin rug!" % (CL.color(file, CL.HEADER), CL.color('was decryptet', CL.OKGREEN)))
         del reader_rb, reader_wb
 
     def encrypt_file(self, file: str):
@@ -124,19 +135,79 @@ class Crypt:
         encrypted_content = self.encrypt(reader_rb.get_whole_file())
         reader_wb = Reader(file, 'wb')
         reader_wb.write_file(encrypted_content)
+        print("File %s %s you fuckin rug!" % (CL.color(file, CL.HEADER), CL.color('was encrypted', CL.OKGREEN)))
         del reader_rb, reader_wb
 
+    def getPassword(self):
+        result = self.crypt_key.decode('utf-8')
+        return result
 
-def checkSysArgs():
-    if not len(sys.argv) > 1:
-        print("Add path to main scss file as argument!")
-        exit()
+    def base64UrlSafe(self, string: str) -> str:
+        string = string.encode("utf-8")
+        return base64.urlsafe_b64encode(string)
 
 
-# reader = Reader(Reader.list_files_name, 'r+')
-# crypt = Crypt('202005132148')
-# for line in reader.file_content:
-#     crypt.decrypt_file(line)
-# for line in reader.file_content:
-#     crypt.encrypt_file(line)
+def myInputFunction():
+    return raw_input()
+
+
+class IO(metaclass=Singleton):
+    pray_info = 'Pray your king Pablo, you fucking rug!'
+    exit_command = ['Pablo is my king', 'exit']
+    ask_for_func_info = 'Your wish is my orders, you fucking rug!'
+    start_info = \
+        '1. Encrypt your fucking rug files\n' \
+        '2. Decrypt your fucking jug files\n' \
+        'To exit just write: "' + exit_command[0] + '"'
+    password_info = 'Your password is: %s YOU RUG!'
+    password_ask_info = 'Gimme your fucking rugy password'
+
+    def run(self):
+        raw_in = ''
+        # while not raw_in == self.exit_command[0]:
+        #     print(CL.color(CL.color(self.pray_info, CL.OKBLUE), CL.BOLD))
+        #     print('Write: "' + self.exit_command[0] + '" to continue')
+        #     raw_in = self.myInputFunction()
+
+        raw_in = ''
+        while raw_in not in self.exit_command:
+            print(self.start_info)
+            raw_in = myInputFunction()
+            self.loadFunction(raw_in)
+
+    def encrypt(self):
+        reader = Reader()
+        crypt = Crypt()
+        for file in reader.file_content:
+            print(file)
+            crypt.encrypt_file(file)
+        print(IO.password_info % CL.color(crypt.getPassword(), CL.WARNING))
+
+    def decrypt(self):
+        print(IO.password_ask_info)
+        raw_in = myInputFunction()
+        reader = Reader()
+        crypt = Crypt(raw_in)
+        for file in reader.file_content:
+            try:
+                crypt.decrypt_file(file)
+            except WrongPassword:
+                print(CL.color(WrongPassword.message, CL.WARNING))
+                break
+
+    def loadFunction(self, name, args=''):
+        if name in self.allFunctions:
+            self.allFunctions[name](args)
+        else:
+            print('You are fuckin dumb rug mate :(')
+
+    allFunctions = {
+        "1": encrypt,
+        "2": decrypt,
+    }
+
+
 CL = ConsoleLogger()
+
+io = IO()
+io.run()
