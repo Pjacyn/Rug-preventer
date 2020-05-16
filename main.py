@@ -1,6 +1,5 @@
 import base64
 import binascii
-import hashlib
 import string
 import random
 from typing import TextIO
@@ -25,35 +24,6 @@ class Singleton(type):
         if cls not in cls._instances:
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
-
-
-def create_files():
-    line = reader.get_next_line()
-    readerWrite = Reader(Reader.list_files_name, 'w')
-    readerWrite.file_content.write(line + '\n')
-    path = os.path.dirname(line)
-    m = hashlib.md5()
-    for i in range(0, 20):
-        fileName = hashlib.md5((str(datetime.now()) + str(i)).encode('utf-8')).hexdigest()
-        full_path = path + '\\' + fileName
-        print(path)
-        print(full_path)
-        if not os.path.exists(full_path):
-            with open(full_path, 'w'): pass
-            readerWrite.file_content.write(full_path + '\n')
-
-
-def log_to_file(data):
-    log_file = os.path.dirname(os.path.realpath(__file__)) + '\log'
-    readerWrite = Reader(log_file, 'a+')
-    readerWrite.file_content.write('Log time:' + str(datetime.now()) + '\n')
-    readerWrite.file_content.write(data + '\n')
-    del readerWrite
-
-
-def random_string(stringLength=32):
-    letters = string.ascii_letters + string.digits
-    return ''.join(random.choice(letters) for i in range(stringLength))
 
 
 class ConsoleLogger(metaclass=Singleton):
@@ -110,10 +80,10 @@ class Crypt:
     crypt_key: str
 
     def __init__(self, password=''):
-        data = random_string()
-        log_to_file(data)
+        data = Crypt.random_string()
+        IO.log_to_file(data)
         if password == '':
-            self.crypt_key = self.base64UrlSafe(data)
+            self.crypt_key = Crypt.base64UrlSafe()
         else:
             self.crypt_key = password
 
@@ -151,9 +121,52 @@ class Crypt:
         result = self.crypt_key.decode('utf-8')
         return result
 
-    def base64UrlSafe(self, string: str) -> str:
-        string = string.encode("utf-8")
-        return base64.urlsafe_b64encode(string)
+    @staticmethod
+    def base64UrlSafe(url: str) -> str:
+        url = url.encode("utf-8")
+        return base64.urlsafe_b64encode(url)
+
+    @staticmethod
+    def random_string(string_length=32):
+        letters = string.ascii_letters + string.digits
+        return ''.join(random.choice(letters) for i in range(string_length))
+
+
+class HostBlocker:
+    win10_hosts = 'C:\Windows\System32\drivers\etc\hosts'
+    starting_line = '\n#RugPreventer Start\n'
+    ending_line = '\n#RugPreventer End'
+
+    @staticmethod
+    def blockHosts():
+        HostBlocker.unblockHosts()
+        writer = Reader(HostBlocker.win10_hosts, 'a+')
+        readerUrls = Reader('urls.txt')
+        writer.file_content.write(HostBlocker.starting_line)
+        for line in readerUrls.file_content:
+            writer.file_content.write(line)
+        writer.file_content.write(HostBlocker.ending_line)
+        del writer, readerUrls
+
+    @staticmethod
+    def unblockHosts():
+        reader = Reader(HostBlocker.win10_hosts, 'r+')
+        starting_line = HostBlocker.starting_line.strip('\n')
+        ending_line = HostBlocker.ending_line.strip('\n')
+        file = reader.file_content
+        file_lines = file.readlines()
+        file.seek(0)
+        save_lines = True
+        for line in file_lines:
+            if save_lines:
+                save_lines = line.find(starting_line) < 0
+            if save_lines:
+                file.write(line)
+            else:
+                if line.find(ending_line) >= 0:
+                    save_lines = True
+        file.truncate()
+        del reader
 
 
 def myInputFunction():
@@ -161,12 +174,12 @@ def myInputFunction():
 
 
 class IO(metaclass=Singleton):
-    pray_info = 'Pray your king Pablo, you fucking rug!'
+    pray_info = 'Pray to your king Pablo, you fucking rug!'
     exit_command = ['Pablo is my king', 'exit']
     ask_for_func_info = 'Your wish is my orders, you fucking rug!'
     start_info = \
-        '1. Encrypt your fucking rug files\n' \
-        '2. Decrypt your fucking jug files\n' \
+        '1. Encrypt your fucking rug files and block urls\n' \
+        '2. Decrypt your fucking jug files and block urls\n' \
         'To exit just write: "' + exit_command[0] + '"'
     password_info = 'Your password is: %s YOU RUG!'
     password_ask_info = 'Gimme your fucking rugy password'
@@ -174,25 +187,35 @@ class IO(metaclass=Singleton):
                     'You use it on your own responsibility.\n' \
                     'Program only for fucking RUGS AND JUGS!\n\n'
 
+    files_needed = {
+        'files.txt': 'In file: %s you should put all path to files with you want to block',
+        'urls.txt': 'In file: %s you should put all urls with you want to block'
+    }
+    absolute_path = os.path.dirname(os.path.realpath(__file__))
+
     def run(self):
         raw_in = ''
         print(CL.color(IO.warranty_info, CL.FAIL))
         time.sleep(3)
+        IO.check_files()
         raw_in = ''
         while raw_in not in self.exit_command:
             print(self.start_info)
             raw_in = myInputFunction()
             self.loadFunction(raw_in)
 
-    def encrypt(self):
+    @staticmethod
+    def encrypt():
         reader = Reader()
         crypt = Crypt()
+        HostBlocker.blockHosts()
         for file in reader.file_content:
             print(file)
             crypt.encrypt_file(file)
         print(IO.password_info % CL.color(crypt.getPassword(), CL.WARNING))
 
-    def decrypt(self):
+    @staticmethod
+    def decrypt():
         print(IO.password_ask_info)
         raw_in = myInputFunction()
         reader = Reader()
@@ -215,8 +238,23 @@ class IO(metaclass=Singleton):
         "2": decrypt,
     }
 
+    @staticmethod
+    def check_files():
+        for file in IO.files_needed:
+            file_path = IO.absolute_path + '\\' + file
+            if not os.path.exists(file_path):
+                Reader(file, 'a+')
+                print(IO.files_needed[file] % file_path)
+
+    @staticmethod
+    def log_to_file(data):
+        log_file = IO.absolute_path + '\log'
+        readerWrite = Reader(log_file, 'a+')
+        readerWrite.file_content.write('Log time:' + str(datetime.now()) + '\n')
+        readerWrite.file_content.write(data + '\n')
+        del readerWrite
+
 
 CL = ConsoleLogger()
-
 io = IO()
 io.run()
