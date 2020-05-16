@@ -1,3 +1,6 @@
 .idea/
 log
 venv/
+files.txt
+url.txt
+output/

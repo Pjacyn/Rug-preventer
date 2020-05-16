@@ -6,6 +6,7 @@ import random
 from typing import TextIO
 import os
 from datetime import datetime
+import time
 
 import cryptography
 from cryptography.fernet import Fernet
@@ -56,14 +57,22 @@ def random_string(stringLength=32):
 
 
 class ConsoleLogger(metaclass=Singleton):
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+    # HEADER = '\033[95m'
+    # OKBLUE = '\033[94m'
+    # OKGREEN = '\033[92m'
+    # WARNING = '\033[93m'
+    # FAIL = '\033[91m'
+    # ENDC = '\033[0m'
+    # BOLD = '\033[1m'
+    # UNDERLINE = '\033[4m'
+    HEADER = ''
+    OKBLUE = ''
+    OKGREEN = ''
+    WARNING = ''
+    FAIL = ''
+    ENDC = ''
+    BOLD = ''
+    UNDERLINE = ''
 
     def color(self, string: str, color_type) -> str:
         return color_type + string + self.ENDC
@@ -161,14 +170,14 @@ class IO(metaclass=Singleton):
         'To exit just write: "' + exit_command[0] + '"'
     password_info = 'Your password is: %s YOU RUG!'
     password_ask_info = 'Gimme your fucking rugy password'
+    warranty_info = 'The program does not contain any warranty!!!\n' \
+                    'You use it on your own responsibility.\n' \
+                    'Program only for fucking RUGS AND JUGS!\n\n'
 
     def run(self):
         raw_in = ''
-        # while not raw_in == self.exit_command[0]:
-        #     print(CL.color(CL.color(self.pray_info, CL.OKBLUE), CL.BOLD))
-        #     print('Write: "' + self.exit_command[0] + '" to continue')
-        #     raw_in = self.myInputFunction()
-
+        print(CL.color(IO.warranty_info, CL.FAIL))
+        time.sleep(3)
         raw_in = ''
         while raw_in not in self.exit_command:
             print(self.start_info)
