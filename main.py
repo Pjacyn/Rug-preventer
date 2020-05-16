@@ -83,7 +83,7 @@ class Crypt:
         data = Crypt.random_string()
         IO.log_to_file(data)
         if password == '':
-            self.crypt_key = Crypt.base64UrlSafe()
+            self.crypt_key = Crypt.base64UrlSafe(data)
         else:
             self.crypt_key = password
 
@@ -98,6 +98,7 @@ class Crypt:
         reader_rb = Reader(file, 'rb')
         try:
             decrypted_content = self.decrypt(reader_rb.get_whole_file())
+            HostBlocker.unblockHosts()
         except cryptography.fernet.InvalidToken:
             print("File %s %s you fuckin rug!" % (
                 CL.color(file, CL.HEADER), CL.color('can\'t be decryptet', CL.FAIL)))
@@ -229,13 +230,13 @@ class IO(metaclass=Singleton):
 
     def loadFunction(self, name, args=''):
         if name in self.allFunctions:
-            self.allFunctions[name](args)
+            IO.allFunctions[name]()
         else:
             print('You are fuckin dumb rug mate :(')
 
     allFunctions = {
-        "1": encrypt,
-        "2": decrypt,
+        "1": encrypt.__func__,
+        "2": decrypt.__func__,
     }
 
     @staticmethod
