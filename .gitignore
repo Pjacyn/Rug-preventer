@@ -4,3 +4,4 @@ venv/
 files.txt
 urls.txt
 output/
+__pycache__/
