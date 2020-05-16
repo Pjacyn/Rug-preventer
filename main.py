@@ -64,7 +64,10 @@ class Reader:
             print('File no founded you fucking rug. This fucking file: ' + self.file_name)
 
     def __del__(self):
-        self.file_content.close()
+        try:
+            self.file_content.close()
+        except AttributeError:
+            pass
 
     def write_file(self, data):
         self.file_content.write(data)
@@ -169,6 +172,15 @@ class HostBlocker:
         file.truncate()
         del reader
 
+    @staticmethod
+    def checkAccess():
+        try:
+            Reader(HostBlocker.win10_hosts, 'w')
+            return True
+        except PermissionError:
+            print('Access denied to file %s run program as admin' % HostBlocker.win10_hosts)
+            return False
+
 
 def myInputFunction():
     return raw_input()
@@ -195,6 +207,8 @@ class IO(metaclass=Singleton):
     absolute_path = os.path.dirname(os.path.realpath(__file__))
 
     def run(self):
+        if not HostBlocker.checkAccess():
+            return
         raw_in = ''
         print(CL.color(IO.warranty_info, CL.FAIL))
         time.sleep(3)
